@@ -2,7 +2,7 @@
 
 import Sqlite from './sqlite/index.js'
 
-import { app, protocol, BrowserWindow } from 'electron'
+import { app, protocol, BrowserWindow, ipcMain } from 'electron'
 import {
   createProtocol
   /* installVueDevtools */
@@ -19,12 +19,13 @@ protocol.registerSchemesAsPrivileged([{ scheme: 'app', privileges: { secure: tru
 function createWindow () {
   // Create the browser window.
   win = new BrowserWindow({
-    width: 800,
-    height: 600,
+    width: 1920,
+    height: 1080,
     webPreferences: {
     // Use pluginOptions.nodeIntegration, leave this alone
     // See nklayman.github.io/vue-cli-plugin-electron-builder/guide/security.html#node-integration for more info
-      nodeIntegration: process.env.ELECTRON_NODE_INTEGRATION
+      // nodeIntegration: process.env.ELECTRON_NODE_INTEGRATION
+      nodeIntegration: true
     }
   })
 
@@ -96,26 +97,29 @@ if (isDevelopment) {
   }
 }
 
-async function test () {
+async function query () {
   const db = Sqlite.getInstance()
   await db.connect()
   await db.run('CREATE TABLE IF NOT EXISTS people(no int, name char)')
-  await db.run(' INSERT INTO people VALUES(1, "Konp1")')
   await db.exec(`
+  INSERT INTO people VALUES(1, "Konp1");
   INSERT INTO people VALUES(2, "Konp2");
   INSERT INTO people VALUES(3, "Konp3");
   INSERT INTO people VALUES(4, "Konp4");
   INSERT INTO people VALUES(5, "Konp5");
   `)
-  await db.run('UPDATE people SET name = "Konp3" WHERE no = 1')
-  await db.run('DELETE FROM people WHERE no = 2')
-  await db.get('SELECT * FROM people').then(data => {
-    console.log(data)
-  })
+  let result = null
   await db.all('SELECT * FROM people').then(data => {
-    console.log(data)
+    result = data
   })
-  db.close()
+  await db.close()
+  return result
 }
 
-test()
+// IPC Test
+ipcMain.on('query_request', (event, arg) => {
+  console.log(arg)
+  query().then(result => {
+    event.reply('query_response', result)
+  })
+})
