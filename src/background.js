@@ -1,5 +1,7 @@
 'use strict'
 
+import Sqlite from './sqlite/index.js'
+
 import { app, protocol, BrowserWindow } from 'electron'
 import {
   createProtocol
@@ -93,3 +95,27 @@ if (isDevelopment) {
     })
   }
 }
+
+async function test () {
+  const db = Sqlite.getInstance()
+  await db.connect()
+  await db.run('CREATE TABLE IF NOT EXISTS people(no int, name char)')
+  await db.run(' INSERT INTO people VALUES(1, "Konp1")')
+  await db.exec(`
+  INSERT INTO people VALUES(2, "Konp2");
+  INSERT INTO people VALUES(3, "Konp3");
+  INSERT INTO people VALUES(4, "Konp4");
+  INSERT INTO people VALUES(5, "Konp5");
+  `)
+  await db.run('UPDATE people SET name = "Konp3" WHERE no = 1')
+  await db.run('DELETE FROM people WHERE no = 2')
+  await db.get('SELECT * FROM people').then(data => {
+    console.log(data)
+  })
+  await db.all('SELECT * FROM people').then(data => {
+    console.log(data)
+  })
+  db.close()
+}
+
+test()
